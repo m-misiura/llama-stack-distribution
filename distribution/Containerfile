@@ -36,6 +36,7 @@ RUN pip install \
     pillow \
     psycopg2-binary \
     pymongo \
+    pyjwt \
     pypdf \
     redis \
     requests \

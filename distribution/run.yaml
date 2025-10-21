@@ -7,7 +7,6 @@ apis:
 - inference
 - safety
 - scoring
-- telemetry
 - tool_runtime
 - vector_io
 - files
@@ -64,10 +63,10 @@ providers:
     provider_type: inline::milvus
     config:
       db_path: /opt/app-root/src/.llama/distributions/rh/milvus.db
-      kvstore:
-        type: sqlite
-        namespace: null
-        db_path: /opt/app-root/src/.llama/distributions/rh/milvus_registry.db
+      persistence:
+        namespace: milvus
+        table_name: milvus_registry
+        backend: kv_default
   - provider_id: ${env.MILVUS_ENDPOINT:+milvus-remote}
     provider_type: remote::milvus
     config:
@@ -78,30 +77,25 @@ providers:
       ca_pem_path: ${env.MILVUS_CA_PEM_PATH:=}
       client_pem_path: ${env.MILVUS_CLIENT_PEM_PATH:=}
       client_key_path: ${env.MILVUS_CLIENT_KEY_PATH:=}
-      kvstore:
-        type: sqlite
-        namespace: null
-        db_path: /opt/app-root/src/.llama/distributions/rh/milvus_remote_registry.db
+      persistence:
+        namespace: milvus_remote
+        table_name: milvus_remote_registry
+        backend: kv_default
   - provider_id: ${env.ENABLE_FAISS:+faiss}
     provider_type: inline::faiss
     config:
       kvstore:
         type: ${env.FAISS_KVSTORE_TYPE:=sqlite}
         namespace: ${env.FAISS_KVSTORE_NAMESPACE:=}
-        # SQLite backend (type=sqlite)
         db_path: ${env.FAISS_KVSTORE_DB_PATH:=}
-        # Redis, PostgreSQL, MongoDB backends (type=redis|postgres|mongodb)
         host: ${env.FAISS_KVSTORE_HOST:=}
         port: ${env.FAISS_KVSTORE_PORT:=}
-        # PostgreSQL, MongoDB backends (type=postgres|mongodb)
         db: ${env.FAISS_KVSTORE_DB:=}
         user: ${env.FAISS_KVSTORE_USER:=}
         password: ${env.FAISS_KVSTORE_PASSWORD:=}
-        # PostgreSQL backend only (type=postgres)
         ssl_mode: ${env.FAISS_KVSTORE_SSL_MODE:=}
         ca_cert_path: ${env.FAISS_KVSTORE_CA_CERT_PATH:=}
         table_name: ${env.FAISS_KVSTORE_TABLE_NAME:=}
-        # MongoDB backend only (type=mongodb)
         collection_name: ${env.FAISS_KVSTORE_COLLECTION_NAME:=}
   safety:
     - provider_id: trustyai_fms
@@ -115,13 +109,14 @@ providers:
   - provider_id: meta-reference
     provider_type: inline::meta-reference
     config:
-      persistence_store:
-        type: sqlite
-        namespace: null
-        db_path: /opt/app-root/src/.llama/distributions/rh/agents_store.db
-      responses_store:
-        type: sqlite
-        db_path: /opt/app-root/src/.llama/distributions/rh/responses_store.db
+      persistence:
+        agent_state:
+          namespace: agents
+          table_name: agents_store
+          backend: kv_default
+        responses:
+          table_name: responses_store
+          backend: sql_default
   eval:
   - provider_id: trustyai_lmeval
     provider_type: remote::trustyai_lmeval
@@ -152,16 +147,16 @@ providers:
     provider_type: remote::huggingface
     config:
       kvstore:
-        type: sqlite
-        namespace: null
-        db_path: /opt/app-root/src/.llama/distributions/rh/huggingface_datasetio.db
+        namespace: huggingface_datasetio
+        table_name: huggingface_datasetio
+        backend: kv_default
   - provider_id: localfs
     provider_type: inline::localfs
     config:
       kvstore:
-        type: sqlite
-        namespace: null
-        db_path: /opt/app-root/src/.llama/distributions/rh/localfs_datasetio.db
+        namespace: localfs_datasetio
+        table_name: localfs_datasetio
+        backend: kv_default
   scoring:
   - provider_id: basic
     provider_type: inline::basic
@@ -173,14 +168,6 @@ providers:
     provider_type: inline::braintrust
     config:
       openai_api_key: ${env.OPENAI_API_KEY:=}
-  telemetry:
-  - provider_id: meta-reference
-    provider_type: inline::meta-reference
-    config:
-      service_name: "${env.OTEL_SERVICE_NAME:=\u200B}"
-      sinks: ${env.TELEMETRY_SINKS:=console}
-      sqlite_db_path: /opt/app-root/src/.llama/distributions/rh/trace_store.db
-      otel_exporter_otlp_endpoint: ${env.OTEL_EXPORTER_OTLP_ENDPOINT:=}
   tool_runtime:
   - provider_id: brave-search
     provider_type: remote::brave-search
@@ -192,9 +179,6 @@ providers:
     config:
       api_key: ${env.TAVILY_SEARCH_API_KEY:=}
       max_results: 3
-  - provider_id: rag-runtime
-    provider_type: inline::rag-runtime
-    config: {}
   - provider_id: model-context-protocol
     provider_type: remote::model-context-protocol
     config: {}
@@ -204,34 +188,53 @@ providers:
     config:
       storage_dir: /opt/app-root/src/.llama/distributions/rh/files
       metadata_store:
-        type: sqlite
-        db_path: /opt/app-root/src/.llama/distributions/rh/files_metadata.db
+        table_name: files_metadata
+        backend: sql_default
 metadata_store:
   type: sqlite
   db_path: /opt/app-root/src/.llama/distributions/rh/registry.db
 inference_store:
   type: sqlite
   db_path: /opt/app-root/src/.llama/distributions/rh/inference_store.db
-models:
-- metadata: {}
-  model_id: ${env.INFERENCE_MODEL:=dummy}
-  provider_id: ${env.VLLM_URL:+vllm-inference}
-  model_type: llm
-- metadata:
-    embedding_dimension: 768
-  model_id: granite-embedding-125m
-  provider_id: sentence-transformers
-  provider_model_id: ibm-granite/granite-embedding-125m-english
-  model_type: embedding
-shields: []
-vector_dbs: []
-datasets: []
-scoring_fns: []
-benchmarks: []
-tool_groups:
-- toolgroup_id: builtin::websearch
-  provider_id: tavily-search
-- toolgroup_id: builtin::rag
-  provider_id: rag-runtime
+storage:
+  backends:
+    kv_default:
+      type: kv_sqlite
+      db_path: /opt/app-root/src/.llama/distributions/rh/kvstore.db
+    sql_default:
+      type: sql_sqlite
+      db_path: /opt/app-root/src/.llama/distributions/rh/sql_store.db
+  stores:
+    metadata:
+      namespace: registry
+      backend: kv_default
+    inference:
+      table_name: inference_store
+      backend: sql_default
+      max_write_queue_size: 10000
+      num_writers: 4
+    conversations:
+      table_name: openai_conversations
+      backend: sql_default
+registered_resources:
+  models:
+  - metadata: {}
+    model_id: ${env.INFERENCE_MODEL:=dummy}
+    provider_id: ${env.VLLM_URL:+vllm-inference}
+    model_type: llm
+  - metadata:
+      embedding_dimension: 768
+    model_id: granite-embedding-125m
+    provider_id: sentence-transformers
+    provider_model_id: ibm-granite/granite-embedding-125m-english
+    model_type: embedding
+  shields: []
+  vector_stores: []
+  datasets: []
+  scoring_fns: []
+  benchmarks: []
+  tool_groups:
+  - toolgroup_id: builtin::websearch
+    provider_id: tavily-search
 server:
   port: 8321
