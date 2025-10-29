@@ -26,6 +26,7 @@ RUN pip install \
     google-cloud-aiplatform \
     httpx \
     ibm_watsonx_ai \
+    pyjwt \
     litellm \
     matplotlib \
     nltk \
@@ -46,18 +47,25 @@ RUN pip install \
     tqdm \
     transformers \
     uvicorn
+RUN python3 -c "import jwt; print('PyJWT installed successfully')"
 RUN pip install \
     llama_stack_provider_lmeval==0.3.1
 RUN pip install \
-    llama_stack_provider_ragas==0.3.5
+    llama_stack_provider_ragas==0.4.1
 RUN pip install \
-    llama_stack_provider_ragas[remote]==0.3.5
+    llama_stack_provider_ragas[remote]==0.4.1
 RUN pip install \
     llama_stack_provider_trustyai_fms==0.2.3
 RUN pip install 'torchao>=0.12.0' --extra-index-url https://download.pytorch.org/whl/cpu torch torchvision
 RUN pip install --no-deps sentence-transformers
+RUN pip install --no-cache llama-stack-client==0.2.23
+RUN pip install --no-cache --no-deps git+https://github.com/opendatahub-io/llama-stack.git@v0.3.0rc2+rhai0
+RUN pip install --upgrade --force-reinstall PyJWT
+RUN pip list | grep -i jwt
+RUN python3 -c "import sys; print('Python path:', sys.path); import jwt; print('JWT version:', jwt.__version__); print('JWT location:', jwt.__file__)"
 # RUN pip install --no-cache llama-stack==0.2.23
-RUN pip install --no-cache -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple mac-llama-stack
+# RUN pip install --no-cache -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple mac-llama-stack
+ENV LLAMA_STACK_DISABLE_VERSION_CHECK=true
 RUN mkdir -p ${HOME}/.llama ${HOME}/.cache
 RUN mkdir -p /opt/app-root/src/.llama/distributions/rh && \
     chown -R 1001:0 /opt/app-root/src/.llama && \
