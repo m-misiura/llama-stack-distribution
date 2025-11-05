@@ -22,10 +22,10 @@ distribution_spec:
     eval:
     - provider_type: remote::trustyai_lmeval
       module: llama_stack_provider_lmeval==0.3.1
-    - provider_type: inline::trustyai_ragas
-      module: llama_stack_provider_ragas==0.4.1
-    - provider_type: remote::trustyai_ragas
-      module: llama_stack_provider_ragas[remote]==0.4.1
+    # - provider_type: inline::trustyai_ragas
+    #   module: llama_stack_provider_ragas==0.4.1
+    # - provider_type: remote::trustyai_ragas
+    #   module: llama_stack_provider_ragas[remote]==0.4.1
     datasetio:
     - provider_type: remote::huggingface
     - provider_type: inline::localfs
@@ -33,8 +33,8 @@ distribution_spec:
     - provider_type: inline::basic
     - provider_type: inline::llm-as-judge
     - provider_type: inline::braintrust
-    telemetry:
-    - provider_type: inline::meta-reference
+    # telemetry:
+    # - provider_type: inline::meta-reference
     tool_runtime:
     - provider_type: remote::brave-search
     - provider_type: remote::tavily-search

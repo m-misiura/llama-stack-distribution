@@ -6,6 +6,9 @@ RUN pip install sqlalchemy # somehow sqlalchemy[asyncio] is not sufficient
 RUN pip install --no-cache llama-stack==0.2.23
 {llama_stack_install_source}
 RUN mkdir -p ${{HOME}}/.llama ${{HOME}}/.cache
+RUN mkdir -p /opt/app-root/src/.llama/distributions/rh && \
+    chown -R 1001:0 /opt/app-root/src/.llama && \
+    chmod -R g+rwX /opt/app-root/src/.llama
 COPY distribution/run.yaml ${{APP_ROOT}}/run.yaml
 
 ENTRYPOINT ["llama", "stack", "run", "/opt/app-root/run.yaml"]
